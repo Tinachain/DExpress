@@ -1,0 +1,29 @@
+{
+	"log": {
+		"path": "log"
+	},
+
+	"rudp": {
+		"port": 41002,
+		"delay": 1,
+		"delay_interval": 2000
+	},
+
+	"protocol": 0,
+
+	"hls": {
+		"echo": 0,
+		"files": {
+			"max": 100,
+			"delete": 50
+		},
+		"file": {
+			"base": "/home/fxh7622"
+		}
+	},
+
+	"multicast": {
+		"group_ip": "127.0.0.1",
+		"group_port": 9999
+	}
+}

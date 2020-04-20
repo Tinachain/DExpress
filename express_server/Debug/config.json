@@ -1,0 +1,19 @@
+{
+	"file": {
+		"base": "/home/fxh7622"
+	},
+	"log": {
+		"path": "log"
+	},
+	"rudp": {
+		"port": 40002,
+		"delay": 0,
+		"delay_interval": 2000
+	},
+	"files": {
+		"max": 100,
+		"delete": 50
+	},
+	"echo": 0
+
+}
