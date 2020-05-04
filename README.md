@@ -15,13 +15,6 @@ RTO均值算法：
 SACK算法和快速重传算法：
 
 
-
-
-
-
-
-[1]: https://www.zybuluo.com/mdeditor?url=https://www.zybuluo.com/static/editor/md-help.markdown
-[2]: https://www.zybuluo.com/mdeditor?url=https://www.zybuluo.com/static/editor/md-help.markdown#cmd-markdown-高阶语法手册
-[3]: http://weibo.com/ghosert
-[4]: http://meta.math.stackexchange.com/questions/5020/mathjax-basic-tutorial-and-quick-reference
+## 性能导图
+![Readme-logo](https://github.com/Tinachain/DExpress/tree/master/image/Readme.png)
 
