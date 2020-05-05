@@ -7,3 +7,9 @@ DExpress是一款低延时安全数据传输产品。这款产品采用HARQ（混合自动重传请求）技术，
 ## 性能导图
 ![image](https://github.com/Tinachain/DExpress/blob/master/image/Readme.jpg)
 
+## PC网站
+https://www.dexpress.com.cn/
+
+## 手机网站(请使用浏览器打开)
+https://m.dexpress.com.cn/
+
