@@ -16,5 +16,5 @@ SACK算法和快速重传算法：
 
 
 ## 性能导图
-![Readme-logo](https://github.com/Tinachain/DExpress/tree/master/image/Readme.png)
+![image](https://github.com/Tinachain/DExpress/blob/master/image/Readme.jpg)
 
