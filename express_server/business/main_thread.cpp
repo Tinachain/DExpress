@@ -149,6 +149,13 @@ main_thread::~main_thread(void)
 		delete udp_manager_;
 		udp_manager_ = nullptr;
 	}
+
+	if(nullptr != http_media_ptr_)
+	{
+		delete http_media_ptr_;
+		http_media_ptr_ = nullptr;
+	}
+
 	free_queue();
 }
 
@@ -198,9 +205,17 @@ void main_thread::free_queue()
 
 void main_thread::execute()
 {
+	//启动RUDP管理类;
 	add_log(LOG_TYPE_INFO, "Create RUDP Manager");
 	udp_manager_ = new udp_manager(json_config_.rudp_config_.port_, json_config_.rudp_config_.delay_, json_config_.rudp_config_.delay_interval_);
 	udp_manager_->init();
+
+	//启动Http的Media管理类;
+	add_log(LOG_TYPE_INFO, "Create HTTP Media");
+	http_media_ptr_ = new http_media(this);
+	http_media_ptr_->write_log_ptr_ = write_log_ptr_;
+	http_media_ptr_->init(json_config_.http_port_);
+
 	current_state_ = tst_runing;
 	while(tst_runing == current_state_)
 	{
@@ -256,7 +271,7 @@ void main_thread::business_dispense()
 				hls_buffer(work_ptr);
 				break;
 			}
-			case HLS_FILE_BUFFER_ENDED:	//返回文件接收完毕;
+			case HLS_FILE_BUFFER_ENDED:		//返回文件接收完毕;
 			{
 				hls_sended(work_ptr);
 				break;
@@ -401,6 +416,11 @@ std::string main_thread::get_local_file(const std::string &extra_path, const std
 		return json_config_.hls_.base_ + "/" + file_name;
 	else
 		return json_config_.hls_.base_ + "/" + extra_path + "/" + file_name;
+}
+
+std::string main_thread::get_absolute_path(const std::string &referer_url)
+{
+	return json_config_.hls_.base_ + "/" + referer_url;
 }
 
 bool main_thread::write_file(char *data, int size, int cur_id, std::shared_ptr<linker_file> file_ptr)
@@ -728,4 +748,294 @@ void main_thread::delete_linker_file(const int &linker_handle)
 	}
 }
 
+const char *main_thread::get_file_type(const char *name)
+{
+    char* dot;
+    dot = strrchr((char*)name, '.');
+    if (dot == NULL)
+        return "text/plain; charset=utf-8";
+    if (strcmp(dot, ".m3u8") == 0 || strcmp(dot, ".ts") == 0)
+    	return "text/html; charset=utf-8";
+    if (strcmp(dot, ".html") == 0 || strcmp(dot, ".htm") == 0)
+        return "text/html; charset=utf-8";
+    if (strcmp(dot, ".jpg") == 0 || strcmp(dot, ".jpeg") == 0)
+        return "image/jpeg";
+    if (strcmp(dot, ".gif") == 0)
+        return "image/gif";
+    if (strcmp(dot, ".png") == 0)
+        return "image/png";
+    if (strcmp(dot, ".css") == 0)
+        return "text/css";
+    if (strcmp(dot, ".au") == 0)
+        return "audio/basic";
+    if (strcmp( dot, ".wav" ) == 0)
+        return "audio/wav";
+    if (strcmp(dot, ".avi") == 0)
+        return "video/x-msvideo";
+    if (strcmp(dot, ".mov") == 0 || strcmp(dot, ".qt") == 0)
+        return "video/quicktime";
+    if (strcmp(dot, ".mpeg") == 0 || strcmp(dot, ".mpe") == 0)
+        return "video/mpeg";
+    if (strcmp(dot, ".vrml") == 0 || strcmp(dot, ".wrl") == 0)
+        return "model/vrml";
+    if (strcmp(dot, ".midi") == 0 || strcmp(dot, ".mid") == 0)
+        return "audio/midi";
+    if (strcmp(dot, ".mp3") == 0)
+        return "audio/mpeg";
+    if (strcmp(dot, ".ogg") == 0)
+        return "application/ogg";
+    if (strcmp(dot, ".pac") == 0)
+        return "application/x-ns-proxy-autoconfig";
+
+    return "text/plain; charset=utf-8";
+}
+
+
+//********************************
+
+http_media::http_media(main_thread *main_thread_ptr)
+{
+	main_thread_ptr_ = main_thread_ptr;
+	http_request_ptr_ = new ustd::http_parser::http_request();
+}
+
+http_media::~http_media(void)
+{
+	if(current_state_ == tst_runing)
+	{
+		current_state_ = tst_stoping;
+		time_t last_timer = time(nullptr);
+		int timer_interval = 0;
+		while((timer_interval <= 2))
+		{
+			time_t current_timer = time(nullptr);
+			timer_interval = static_cast<int>(difftime(current_timer, last_timer));
+			if(current_state_ == tst_stoped)
+			{
+				break;
+			}
+			ustd::rudp_public::sleep_delay(50);
+		}
+	}
+}
+
+void http_media::init(const int &port)
+{
+	port_ = port;
+	thread_ptr_ = std::thread(&http_media::execute, this);
+	thread_ptr_.detach();
+}
+
+//写回调处理
+void write_callback(struct bufferevent* bufev, void* arg)
+{
+    return ;
+}
+
+void send_html_head(struct bufferevent* bufev, int stat_no, const char* stat_desc, char* type, long len)
+{
+    char buf[1024] = {0};
+    sprintf(buf,"HTTP/1.1 %d %s \r\n", stat_no, stat_desc);
+    bufferevent_write(bufev, buf, strlen(buf));
+
+    sprintf(buf,"Content-Type: %s; charset=utf-8\r\n", type);
+    sprintf(buf + strlen(buf), "Content-Length:%ld\r\n", len);
+    bufferevent_write(bufev, buf, strlen(buf));
+
+    bufferevent_write(bufev, "\r\n", 2);
+}
+
+//开始读取回调
+void read_media_callback(struct bufferevent* bufev, void* arg)
+{
+	http_media* http_media_ptr = static_cast<http_media*>(arg);
+	struct evbuffer *buf = bufferevent_get_input(bufev);
+	char buffer[1024] = {0};
+	char params[4096] = {0};
+	int n = 0;
+	int offset = 0;
+	while ((n = evbuffer_remove(buf, buffer, sizeof(buffer))) > 0)
+	{
+		memcpy(params + offset, buffer, n);
+		offset += n;
+	}
+
+	http_media_ptr->add_log(LOG_TYPE_INFO, "read_media_callback Request =%s\n", params);
+
+	ustd::http_parser::http_request_data tmp_http_request_data;
+	tmp_http_request_data.init();
+	if(!http_media_ptr->http_request_ptr_->request_parse(params, offset, tmp_http_request_data))
+	{
+		http_media_ptr->add_log(LOG_TYPE_ERROR, "read_media_callback function request_parse failed\n");
+		return;
+	}
+
+	if(tmp_http_request_data.request_type_ != ustd::http_parser::GET_)
+	{
+		http_media_ptr->add_log(LOG_TYPE_ERROR, "read_media_callback is not GET\n");
+		return;
+	}
+
+	//确定出用户请求的文件位置
+	std::string absolute_path = http_media_ptr->main_thread_ptr_->get_absolute_path(tmp_http_request_data.referer_url_);
+	bool exist = ustd::path::is_file_exist(absolute_path);
+	if(!exist)
+	{
+		//检测的文件不存在，直接返回404
+		http_media_ptr->add_log(LOG_TYPE_ERROR, "read_media_callback not found local_file=%s\n", absolute_path.c_str());
+		return;
+	}
+
+	//读取文件
+	int filehandle = open(absolute_path.c_str(), O_RDONLY);
+	if(-1 == filehandle)
+	{
+		http_media_ptr->add_log(LOG_TYPE_ERROR, "read_media_callback open file error local_file=%s\n", absolute_path.c_str());
+		return;
+	}
+
+	//获取文件大小
+	long long file_size = ustd::path::get_file_size(absolute_path.c_str());
+
+	//发送html的包头
+	const char *type = http_media_ptr->main_thread_ptr_->get_file_type(absolute_path.c_str());
+	send_html_head(bufev, 200, "OK", (char*)type, file_size);
+
+	//发送文件内容
+	const int length = 32 * 1024;
+	char read_buf[length] = {0};
+	int read_len = 0;
+	long write_size = 0;
+	while((read_len = read(filehandle, read_buf, length)) > 0)
+	{
+		if(0 == read_len)
+		{
+			break;
+		}
+
+		bufferevent_write(bufev, read_buf, read_len);
+		write_size += read_len;
+		memset(read_buf, 0, sizeof(read_buf));
+	}
+	close(filehandle);
+
+	bufferevent_write(bufev,"\r\n", 2);
+}
+
+//错误回调
+void event_media_callback(struct bufferevent* bufev, short event, void* arg)
+{
+	if (event & BEV_EVENT_EOF)
+	{
+		//http_media_ptr->add_log(LOG_TYPE_INFO, "event_media_callback BEV_EVENT_EOF\n");
+	}
+	else if(event & BEV_EVENT_ERROR)
+	{
+		//http_media_ptr->add_log(LOG_TYPE_INFO, "event_media_callback BEV_EVENT_ERROR\n");
+	}
+	else if(event & BEV_EVENT_TIMEOUT)
+	{
+		//http_media_ptr->add_log(LOG_TYPE_INFO, "event_media_callback BEV_EVENT_TIMEOUT\n");
+	}
+	bufferevent_free(bufev);
+	bufev = nullptr;
+}
+
+//监听回调
+void listener_media_callback(struct evconnlistener *listener, evutil_socket_t fd, struct sockaddr* cli, int cli_len, void* arg)
+{
+	http_media* http_media_ptr = static_cast<http_media*>(arg);
+	http_media_ptr->client_ = cli;
+
+	//设置为非阻塞
+	evutil_make_socket_nonblocking(fd);
+
+	//创建befferevent
+	struct bufferevent* bufev = bufferevent_socket_new(http_media_ptr->base,
+																		fd,
+																		BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS | BEV_OPT_THREADSAFE);
+	int ret = bufferevent_enable(bufev, BEV_OPT_THREADSAFE);
+	if (ret < 0)
+	{
+		http_media_ptr->add_log(LOG_TYPE_ERROR, "Failed to bufferevent_enable BEV_OPT_THREADSAFE\n");
+	}
+	bufferevent_setcb(bufev, read_media_callback, write_callback, event_media_callback, arg);
+	bufferevent_enable(bufev, EV_READ | EV_PERSIST);
+
+	//设置超时
+	struct timeval timeout_read;
+	timeout_read.tv_sec = 10;
+	timeout_read.tv_usec = 0;
+	bufferevent_set_timeouts(bufev, &timeout_read, NULL);
+
+	//设置水位
+	bufferevent_setwatermark(bufev, EV_READ, 0, 0);
+
+	//设置事件
+	bufferevent_enable(bufev, EV_READ | EV_WRITE);
+}
+
+void http_media::execute()
+{
+	add_log(LOG_TYPE_INFO, "http_media event_base_new port=%d\n", port_);
+
+	evthread_use_pthreads();
+
+	base = event_base_new();
+	if (!base)
+	{
+		add_log(LOG_TYPE_ERROR, "http_media event_base_new error=%d port=%d\n", errno, port_);
+		return;
+	}
+
+	//设置监听的地址
+	struct sockaddr_in ser;
+	ser.sin_family = AF_INET;
+	ser.sin_port = htons(port_);
+	inet_pton(AF_INET, "0.0.0.0", &(ser.sin_addr.s_addr));
+	struct evconnlistener* listen = evconnlistener_new_bind(	base,
+																				listener_media_callback,
+																				this,
+																				LEV_OPT_REUSEABLE | LEV_OPT_CLOSE_ON_FREE | LEV_OPT_THREADSAFE,
+																				128,
+																				(struct sockaddr *)&ser,
+																				sizeof(ser));
+
+	if(nullptr == listen)
+	{
+		add_log(LOG_TYPE_ERROR, "evconnlistener_new_bind error=%d port=%d\n", errno, port_);
+		return;
+	}
+	//开工
+	add_log(LOG_TYPE_INFO, "event_base_dispatch port=%d\n", port_);
+	event_base_dispatch(base);
+
+	//释放
+	evconnlistener_free(listen);
+	event_base_free(base);
+}
+
+void http_media::add_log(const int &log_type, const char *log_text_format, ...)
+{
+	std::lock_guard<std::recursive_mutex> guard_log(log_lock_);
+
+	const int array_length = 1024 * 10;
+	char log_text[array_length];
+	memset(log_text, 0x00, array_length);
+
+	va_list arg_ptr;
+	va_start(arg_ptr, log_text_format);
+	int result = vsprintf(log_text, log_text_format, arg_ptr);
+	va_end(arg_ptr);
+	if (result <= 0)
+		return;
+
+	if (result > array_length)
+		return;
+
+	if(nullptr != write_log_ptr_)
+	{
+		write_log_ptr_->write_log3(log_type, log_text);
+	}
+}
 

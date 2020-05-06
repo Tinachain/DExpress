@@ -70,11 +70,23 @@ void web_protocol::generic_handler(struct evhttp_request *request, void *arg)
 				{
 					web_protocol_mananger_ptr->check_message(WEB_ERROR, "evbuffer_remove length != ret error=%d", errno);
 				}
+				
+				//得到POST的参数;
+				std::string params_string(buffer, length);
+
+				// //需要在这里进行协议信息的拆分;
+				// cJSON *root = cJSON_Parse(params_string.c_str());
+				// if(nullptr == root)
+				// {
+				// 	add_log(LOG_TYPE_ERROR, "Json Parse Failed %s", params_string.c_str());
+				// 	return;
+				// }
+				// std::vector<std::string> tmp_vector;
+				// int message_id = ustd::json::get_value_int(root, tmp_vector, "id");
 
 				if(web_protocol_mananger_ptr->on_add_queue_ != nullptr)
 				{
 					//投递web请求给主线程;
-					std::string params_string(buffer, length);
 					web_protocol_mananger_ptr->on_add_queue_("POST", params_string, request);
 					evhttp_send_reply(request, HTTP_OK, "OK", buf);
 				}

@@ -18,8 +18,8 @@
 #include "path.h"
 
 using namespace std;
-const std::string curVersion = "express_client version: 1.4.0";
-const std::string noticeString = "This Is Transmission Client Can Max Pool...";
+const std::string curVersion = "Dexpress Client version: 2.0.1";
+const std::string noticeString = "This Is Dexpress Client Can Max Pool...";
 
 int main(int argc, char *argv[])
 {

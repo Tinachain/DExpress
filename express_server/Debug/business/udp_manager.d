@@ -24,7 +24,7 @@ business/udp_manager.d: ../business/udp_manager.cpp \
  /mnt/hgfs/public/header/path.h ../business/main_thread.h \
  /mnt/hgfs/public/multicast/multicast_server.h \
  /mnt/hgfs/public/header/write_log.h /mnt/hgfs/public/files/files.h \
- /mnt/hgfs/public/header/ini.h
+ ../business/http_parser.h /mnt/hgfs/public/header/ini.h
 
 ../business/udp_manager.h:
 
@@ -81,5 +81,7 @@ business/udp_manager.d: ../business/udp_manager.cpp \
 /mnt/hgfs/public/header/write_log.h:
 
 /mnt/hgfs/public/files/files.h:
+
+../business/http_parser.h:
 
 /mnt/hgfs/public/header/ini.h:

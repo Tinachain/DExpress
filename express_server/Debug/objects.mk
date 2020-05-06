@@ -4,5 +4,5 @@
 
 USER_OBJS :=
 
-LIBS := -levent -lssl -lcrypto
+LIBS := -levent -levent_pthreads -lssl -lcrypto
 

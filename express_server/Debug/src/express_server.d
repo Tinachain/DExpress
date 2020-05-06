@@ -25,7 +25,8 @@ src/express_server.d: ../src/express_server.cpp \
  /mnt/hgfs/public/rudp/server/rudp/../../header/encrypt/aes/../vendor/openssl/include/openssl/aes.h \
  /mnt/hgfs/public/header/path.h \
  /mnt/hgfs/public/multicast/multicast_server.h \
- /mnt/hgfs/public/header/write_log.h /mnt/hgfs/public/files/files.h
+ /mnt/hgfs/public/header/write_log.h /mnt/hgfs/public/files/files.h \
+ ../src/../business/http_parser.h
 
 ../src/../business/main_thread.h:
 
@@ -82,3 +83,5 @@ src/express_server.d: ../src/express_server.cpp \
 /mnt/hgfs/public/header/write_log.h:
 
 /mnt/hgfs/public/files/files.h:
+
+../src/../business/http_parser.h:

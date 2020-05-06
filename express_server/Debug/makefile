@@ -42,7 +42,7 @@ endif
 all: express_server
 
 dependents:
-	-cd /mnt/hgfs/projects/Cross_Live/file_express/express_server/Release && $(MAKE) all
+	-cd /mnt/hgfs/projects/Cross_Live/file_express/express_server/Release && $(MAKE) clean all
 
 # Tool invocations
 express_server: $(OBJS) $(USER_OBJS) /mnt/hgfs/projects/Cross_Live/file_express/express_server/Release/express_server

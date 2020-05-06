@@ -8,12 +8,22 @@
 #include <mutex>
 #include <unordered_map>
 
+//包含event2头;
+#include <event2/bufferevent.h>
+#include <event2/buffer.h>
+#include <event2/http.h>
+#include <event2/listener.h>
+#include <event2/util.h>
+#include <event2/event.h>
+#include <event2/thread.h>
+
 #include "../../header/file_public.h"
 #include "../../header/file_protocol.h"
 #include "udp_manager.h"
 #include "multicast_server.h"
 #include "write_log.h"
 #include "files.h"
+#include "http_parser.h"
 
 struct log_record
 {
@@ -92,6 +102,37 @@ struct json_config
 	hls_config hls_;
 	multicast_config multicast_;
 	bool tested_;
+	int http_port_;
+};
+
+class main_thread;
+class http_media;
+
+class http_media
+{
+public:
+	main_thread *main_thread_ptr_ = nullptr;
+	http_media(main_thread *main_thread_ptr);
+	~http_media(void);
+	void init(const int &port);
+
+public:
+	struct event_base *base;
+
+	ustd::http_parser::http_request *http_request_ptr_;
+	int port_ = -1;
+	struct sockaddr* client_ = nullptr;
+
+public:
+	thread_state_type current_state_ = tst_init;
+	std::thread thread_ptr_;
+	void execute();
+
+public:
+	std::recursive_mutex log_lock_;
+	std::string core_log_ = "";
+	ustd::log::write_log* write_log_ptr_ = nullptr;
+	void add_log(const int &log_type, const char *log_text_format, ...);
 };
 
 class main_thread
@@ -111,6 +152,7 @@ public:
 public:
 	udp_manager *udp_manager_ = nullptr;
 	ustd::log::write_log *write_log_ptr_ = nullptr;
+	http_media *http_media_ptr_ = nullptr;
 	std::thread thread_ptr_;
 	void execute();
 
@@ -152,6 +194,10 @@ private:
 	bool write_file(char *data, int size, int cur_id, std::shared_ptr<linker_file> file_ptr);
 	std::string get_local_path(const std::string &extra_path, const std::string &file_name);
 	std::string get_local_file(const std::string &extra_path, const std::string &file_name);
+
+public:
+	std::string get_absolute_path(const std::string &referer_url);
+	const char *get_file_type(const char *name);
 
 public:	
 	server_message_buffer *first_ = nullptr, *last_ = nullptr;

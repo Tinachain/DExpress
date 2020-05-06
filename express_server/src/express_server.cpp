@@ -18,8 +18,8 @@
 #include "../business/main_thread.h"
 
 using namespace std;
-const std::string curVersion = "express_server version: 1.4.0";
-const std::string noticeString = "This Is Transmission Server Can Echo ...";
+const std::string curVersion = "Dexpress Server version: 2.0.1";
+const std::string noticeString = "This Is Dexpress Server Can Echo ...";
 
 int main()
 {

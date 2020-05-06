@@ -24,8 +24,9 @@ business/main_thread.d: ../business/main_thread.cpp \
  /mnt/hgfs/public/header/path.h \
  /mnt/hgfs/public/multicast/multicast_server.h \
  /mnt/hgfs/public/header/write_log.h /mnt/hgfs/public/files/files.h \
- /mnt/hgfs/public/header/ini.h /mnt/hgfs/public/header/json.h \
- /mnt/hgfs/public/header/cJSON.h /mnt/hgfs/public/header/string_list.h
+ ../business/http_parser.h /mnt/hgfs/public/header/ini.h \
+ /mnt/hgfs/public/header/json.h /mnt/hgfs/public/header/cJSON.h \
+ /mnt/hgfs/public/header/string_list.h
 
 ../business/main_thread.h:
 
@@ -82,6 +83,8 @@ business/main_thread.d: ../business/main_thread.cpp \
 /mnt/hgfs/public/header/write_log.h:
 
 /mnt/hgfs/public/files/files.h:
+
+../business/http_parser.h:
 
 /mnt/hgfs/public/header/ini.h:
 

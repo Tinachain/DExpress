@@ -610,7 +610,7 @@ void main_thread::business_dispense()
 		switch(work_ptr->message_id_)
 		{
 			//HLS协议
-			case HLS_FILE_BUFFER_ENDED:	//返回文件接收完毕;
+			case HLS_FILE_BUFFER_ENDED:		//返回文件接收完毕;
 			{
 				hls_sended(work_ptr);
 				break;
