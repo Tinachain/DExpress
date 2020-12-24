@@ -231,9 +231,5 @@ int main()
 	}
 	return 0;
 
-	//调用透出函数;
-	//std::string remote_ip_string = "47.110.15.241";
-	//std::string remote_ip_string = "47.114.153.16";
-	//std::string remote_ip_string = "115.29.176.57";
 }
 
